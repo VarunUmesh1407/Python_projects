@@ -1,7 +1,9 @@
 The script snake_game.py is a simple implementation of the classic snake game from the 90's.
+
 [<img src="img.png" width="200"/>](image.png)
 
 The script uses pythons Curses library to execute and visulaize the game in Terminal.
+
 [<img src="img_2.png" width="300"/>](image1.png)
 
 To excute and play the game:
