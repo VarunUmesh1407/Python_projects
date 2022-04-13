@@ -1,4 +1,5 @@
 import os
+import pandas as pd
 import random
 import PySimpleGUI as sg
 
@@ -16,17 +17,16 @@ layout = [[sg.Text("Website name/link with new login")],
 window = sg.Window('PASSWORD GENERATOR', layout)
 
 
+# save the password data in a csv file to access later
 def save_password_details(website_id, email_address, password):
     details_dict = {"WEB_ID": [website_id], "EMAIL_ID": [email_address], "PASSWORD": [password]}
-    update_details = str(details_dict)
-    if os.path.exists('Password_details.txt'):
-        file = open("Password_details.txt", "a")
-        file.write(update_details + "\n")
-        file.close()
+    rows_to_add = pd.DataFrame(details_dict)
+    if os.path.exists('Password_details.csv'):
+        df = pd.read_csv('Password_details.csv')
+        df = pd.concat([df, rows_to_add])
+        df.to_csv('Password_details.csv', mode='w+', index=False, header=True)
     else:
-        file = open("Password_details.txt", "w")
-        file.write(update_details + "\n")
-        file.close()
+        rows_to_add.to_csv('Password_details.csv', mode='w+', index=False, header=True)
 
 
 # generate random passwords
