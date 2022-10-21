@@ -3,5 +3,5 @@ This Implementation is a classic game of Hangman.
 Execution:
 > python3 -m hangman
 
-![img.png](img.png)
+[<img src="img.png" width="200"/>](img.png)
 
