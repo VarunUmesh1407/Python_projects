@@ -28,10 +28,14 @@ def save_logout_data(logout):
     cols_to_add = pd.DataFrame(logout_dict)
     if os.path.exists('Timesheet.csv'):
         df = pd.read_csv('Timesheet.csv')
-        df = df.merge(cols_to_add, left_index=True, right_index=True)
-        df.to_csv('Timesheet.csv', mode='w+', index=False, header=True)
+        if "Clock OUT" in df.columns:
+            df = df.append({'Clock OUT': logout}, ignore_index=True)
+            df.to_csv('Timesheet.csv', mode='w+', index=False, header=True)
+        else:
+            df = df.merge(cols_to_add, left_index=True, right_index=True)
+            df.to_csv('Timesheet.csv', mode='w+', index=False, header=True)
     else:
-        print("ERROR saving Time")
+        print("Error !!!")
 
 
 layout = [[sg.Text("Time Stamp Grab")],
@@ -57,6 +61,6 @@ while True:
         elif event == 'Logout':
             logout_time = now.strftime("%H:%M:%S")
             window['-logout-'].update(logout_time)
-            #save_logout_data(logout_time)
+            save_logout_data(logout_time)
 # Finish up by removing from the screen
 window.close()
