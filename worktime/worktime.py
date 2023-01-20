@@ -47,8 +47,7 @@ def calculate_hours():
     stunden = "{:.2f}".format(no_hours.total_seconds() / 3600)
     lunch_break = 0.75
     stunden_with_break = float(stunden) - lunch_break
-    current_date = datetime.now().date()
-    my_cursor.execute("UPDATE work_hours SET hours = %s WHERE date = %s", (stunden_with_break, current_date))
+    my_cursor.execute("UPDATE work_hours SET hours = %s WHERE date = %s", (stunden_with_break, system_date))
     mydb.commit()
     return stunden
 
