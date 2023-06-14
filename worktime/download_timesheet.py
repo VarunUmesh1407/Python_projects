@@ -1,49 +1,109 @@
-# canvas_form.py
 import calendar
 from datetime import datetime, date
 
 from reportlab.lib import colors
 from reportlab.lib.pagesizes import letter
-from reportlab.pdfgen import canvas
-from reportlab.platypus import SimpleDocTemplate, Table, TableStyle
+from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
+from reportlab.platypus import SimpleDocTemplate, Table, TableStyle, Image, Paragraph
+from reportlab.lib.units import inch
+from reportlab.platypus import PageTemplate, Frame
+import pandas as pd
 
 now = datetime.now()
-month =  "WorkTime of" +  " " + calendar.month_name[now.month]
+month = "WorkTime of" + " " + calendar.month_name[now.month]
 system_date = date.today().strftime('%Y/%m/%d')
 
 
+def download_table_to_pdf(table_name, pdf_file, mydb):
+    # Read the table into a DataFrame (assuming you have a valid connection named 'mydb')
+    df = pd.read_sql_query("SELECT * FROM " + table_name, mydb)
 
+    # Convert DataFrame to table data
+    data = [df.columns.tolist()] + df.values.tolist()
 
-def form(path):
-    my_canvas = canvas.Canvas(path, pagesize=letter)
-    my_canvas.drawImage("logo.png", 30, 740, width=50, height=30)
-    my_canvas.setLineWidth(.3)
-    my_canvas.setFont('Helvetica', 16)
-    my_canvas.drawString(200, 750, month )
-    my_canvas.setFont('Helvetica', 8)
-    my_canvas.drawString(500, 750, system_date)
-    my_canvas.setFont('Helvetica', 12)
-    my_canvas.drawString(30, 703, 'Employee name:')
-    my_canvas.drawString(150, 703, "Varun Umesh")
-    doc = SimpleDocTemplate(
-        "simple_table_with_style.pdf",
-        pagesize=letter,
+    # Generate PDF using reportlab
+    doc = SimpleDocTemplate(pdf_file, pagesize=letter)
+
+    # Define styles for the title and date
+    styles = getSampleStyleSheet()
+    title_style = ParagraphStyle(
+        name='TitleStyle',
+        parent=styles['Title'],
+        fontSize=20,
+        textColor=colors.black,
+        spaceAfter=0.5 * inch,
     )
-    flowables = []
-    data = [
-        ['col_{}'.format(x) for x in range(1, 6)],
-        [str(x) for x in range(1, 6)],
-        ['a', 'b', 'c', 'd', 'e'],
-    ]
-    tblstyle = TableStyle([
-        ('BACKGROUND', (0, 0), (-1, 0), colors.red),
-        ('TEXTCOLOR', (0, 1), (-1, 1), colors.blue),
-    ])
-    tbl = Table(data)
-    tbl.setStyle(tblstyle)
-    flowables.append(tbl)
-    doc.build(flowables)
+    date_style = ParagraphStyle(
+        name='DateStyle',
+        parent=styles['Normal'],
+        fontSize=10,
+        textColor=colors.gray,
+        spaceAfter=0.2 * inch,
+    )
 
-    my_canvas.save()
-if __name__ == '__main__':
-    form('canvas_form.pdf')
+    user_style = ParagraphStyle(
+        name='UserStyle',
+        parent=styles['Normal'],
+        fontSize=12,
+        textColor=colors.black,
+        spaceAfter=0.5 * inch,
+    )
+
+    table_content_style = ParagraphStyle(
+        name='TableContentStyle',
+        parent=styles['Normal'],
+        fontSize=10,
+        textColor=colors.black,
+        spaceAfter=0.5 * inch,
+    )
+    # Define the title
+    title_name = calendar.month_name[now.month] + " " + "Timesheet"
+    title = Paragraph(title_name, title_style)
+
+    # Get today's date
+    today = date.today().strftime("%B %d, %Y")
+    date_text = f"Date: {today}"
+    date_paragraph = Paragraph(date_text, date_style)
+
+    # define general info
+    table_content = "This is a time sheet for the month of " + title_name + "."
+    content_paragraph = Paragraph(table_content, table_content_style)
+
+    # get user info from database
+
+    # Define table style
+    tblstyle = TableStyle([
+        ('BACKGROUND', (0, 0), (-1, 0), colors.lightblue),  # Header background color
+        ('TEXTCOLOR', (0, 0), (-1, 0), colors.black),  # Header text color
+        ('ALIGN', (0, 0), (-1, -1), 'CENTER'),  # Table content alignment
+        ('FONTNAME', (0, 0), (-1, 0), 'Helvetica-Bold'),  # Header font
+        ('FONTSIZE', (0, 0), (-1, 0), 12),  # Header font size
+        ('BOTTOMPADDING', (0, 0), (-1, 0), 12),  # Header bottom padding
+        ('BACKGROUND', (0, 1), (-1, -1), colors.beige),  # Table content background color
+        ('GRID', (0, 0), (-1, -1), 1, colors.black),  # Table grid lines
+    ])
+
+    # Create the table
+    table = Table(data)
+    table.setStyle(tblstyle)
+
+    # Add logo
+    logo = "logo.png"  # Path to your logo image file
+    image = Image(logo, width=100, height=50)
+    image.hAlign = 'LEFT'
+
+    # Build the PDF document
+    elements = [
+        image, title,  # Logo and title in the same row
+        date_paragraph,  # Date in a separate row
+        content_paragraph,  # Info about the document
+        table  # Table in a separate row
+    ]
+
+    def add_page_borders(canvas, doc):
+        canvas.saveState()
+        canvas.setStrokeColor(colors.black)
+        canvas.rect(0, 0, doc.pagesize[0], doc.pagesize[1])
+        canvas.restoreState()
+
+    doc.build(elements, onFirstPage=add_page_borders, onLaterPages=add_page_borders)
