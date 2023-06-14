@@ -14,9 +14,10 @@ month = "WorkTime of" + " " + calendar.month_name[now.month]
 system_date = date.today().strftime('%Y/%m/%d')
 
 
-def download_table_to_pdf(table_name, pdf_file, mydb):
+def download_table_to_pdf(table_name, pdf_file, username, mydb):
     # Read the table into a DataFrame (assuming you have a valid connection named 'mydb')
     df = pd.read_sql_query("SELECT * FROM " + table_name, mydb)
+    df_user = pd.read_sql_query("SELECT * FROM user_database", mydb)
 
     # Convert DataFrame to table data
     data = [df.columns.tolist()] + df.values.tolist()
