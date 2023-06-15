@@ -5,18 +5,18 @@ from reportlab.lib import colors
 from reportlab.platypus import SimpleDocTemplate, Table, TableStyle, Image
 import download_timesheet as dt
 import PySimpleGUI as sg
-import mysql.connector
+import mysql.connector as mysql
 import pandas as pd
-import pdfkit
+
 
 now = datetime.now()
 font = ('Helvetica', 12, 'bold italic')
-sg.theme('Dark')
+sg.theme('Green')
 sg.set_options(font=font)
 color = (sg.theme_background_color(), sg.theme_background_color())
 system_date = date.today()
 
-mydb = mysql.connector.connect(
+mydb = mysql.connect(
     host="localhost",
     user="admin",
     password="root",
@@ -102,16 +102,28 @@ def calculate_hours():
 
 
 def worktime_gui():
-    layout = [[sg.Text("LOGIN", justification="center"),
-               sg.Button(' ', button_color=color, image_filename="in.png", border_width=0, pad=(40, 1), key="login"),
-               sg.Text("LOGOUT", justification="center"),
-               sg.Button(' ', button_color=color, image_filename="out.png", border_width=0, pad=(50, 1), key="logout")],
-              [sg.Text('You can only manage time if you track it right. - Spica’s team', justification='center',
-                       pad=(1, 50))],
-              [sg.Button(' ', button_color=color, image_filename="download.png", key='download')]]
+
+    # Define the path to the images
+    login_image = 'in.png'
+    logout_image = 'out.png'
+    download_image =  'download.png'
+    # Define the corporate theme for the window
+    sg.theme('Green')
+
+    layout = [
+        [
+            sg.Text('LOGIN', justification='center', font=('Arial', 14, 'bold')),
+            sg.Button('', button_color=color, image_filename=login_image, border_width=0, pad=(30, 20), key='login'),
+            sg.Text('LOGOUT', justification='center', font=('Arial', 14, 'bold')),
+            sg.Button('', button_color=color, image_filename=logout_image, border_width=0, pad=(30, 20), key='logout')
+        ],
+        [
+            sg.Button('', button_color=color, image_filename=download_image, border_width=0, pad=(30, 20), key='download')
+        ]
+    ]
 
     # Create the window
-    window = sg.Window('WORKTIME GRABBER', layout, background_color='#3a3f44', finalize=True, size=(530, 320))
+    window = sg.Window('WORKTIME GRABBER', layout)
     # Display and interact with the Window using an Event Loop
     while True:
         event, values = window.read()
@@ -146,21 +158,37 @@ def worktime_gui():
     window.close()
 
 
-# Path to your logo image
+# Define the path to the logo image file
 logo_path = 'logo.png'
 
 # Create an sg.Image element for the logo
 logo = sg.Image(logo_path)
 
+# Define the corporate theme for the window
+sg.theme('Green')
+
+
 layout = [
-    [logo ],
-    [sg.Text('Company name:'), sg.Input(key='-COMPANYNAME-')],
-    [sg.Text('Username:'), sg.Input(key='-USERNAME-')],
-    [sg.Text('Password:'), sg.Input(key='-PASSWORD-', password_char='*')],
-    [sg.Button('Login')]
+    [
+        sg.Column(
+            [
+                [logo],
+                [sg.Text('You can only manage time if you track it right. - Spica’s team', justification='center',
+                       pad=(1, 50))],
+                [sg.Text('Company Name', font=('Arial', 14, 'bold'))],
+                [sg.Input(key='-COMPANYNAME-', size=(20, 1))],
+                [sg.Text('Username', font=('Arial', 14, 'bold'))],
+                [sg.Input(key='-USERNAME-', size=(20, 1))],
+                [sg.Text('Password', font=('Arial', 14, 'bold'))],
+                [sg.Input(key='-PASSWORD-', size=(20, 1), password_char='*')],
+                [sg.Button('Login', font=('Arial', 14), size=(10, 1))]
+            ],
+            element_justification='c',
+        )
+    ]
 ]
 
-window = sg.Window('Login', layout)
+window = sg.Window('Login', layout, element_justification='c')
 
 while True:
     event, values = window.read()
