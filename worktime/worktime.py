@@ -8,7 +8,6 @@ import PySimpleGUI as sg
 import mysql.connector as mysql
 import pandas as pd
 
-
 now = datetime.now()
 font = ('Helvetica', 12, 'bold italic')
 sg.theme('Green')
@@ -34,7 +33,7 @@ def user_database_table_check():
     if not table_exists:
         my_cursor.execute("""
             CREATE TABLE user_database(
-                id INTEGER PRIMARY KEY,
+                id INT AUTO_INCREMENT PRIMARY KEY,
                 employee_id INTEGER,
                 company_name TEXT,
                 username TEXT,
@@ -44,13 +43,20 @@ def user_database_table_check():
         mydb.commit()
 
 
-def validate_user_login(companyname, username, password):
-    my_cursor.execute('SELECT * FROM user_database WHERE username = %s AND company_name = %s', (username, companyname,))
+def validate_user_login(username, password):
+    my_cursor.execute('SELECT * FROM user_database WHERE username = %s', (username, ))
     user = my_cursor.fetchone()
 
     if user and user[4] == password:
         return True
     return False
+
+
+def get_employee_id(username):
+    my_cursor.execute('SELECT * FROM user_database WHERE username = %s', (username, ))
+    user = my_cursor.fetchone()
+
+    return user[1]
 
 
 def database_table_check():
@@ -60,6 +66,8 @@ def database_table_check():
     if not table_exists:
         my_cursor.execute("""
             CREATE TABLE work_hours (
+                id INT AUTO_INCREMENT PRIMARY KEY,
+                employee_id INTEGER,
                 date DATE,
                 login TIME,
                 logout TIME,
@@ -75,14 +83,14 @@ def get_pdf_name():
     return month + "_" + "timesheet.pdf"
 
 
-def save_login_data(to_login):
-    my_cursor.execute("INSERT INTO work_hours (date, login) VALUES (%s, %s) ",
-                      (system_date, to_login))
+def save_login_data(to_login, employee_id):
+    my_cursor.execute("INSERT INTO work_hours (employee_id, date, login) VALUES (%s,%s, %s) ",
+                      (employee_id, system_date, to_login))
     mydb.commit()
 
 
-def save_logout_data(to_logout):
-    my_cursor.execute("UPDATE work_hours SET logout = %s WHERE date = %s", (to_logout, system_date))
+def save_logout_data(to_logout, employee_id):
+    my_cursor.execute("UPDATE work_hours SET logout = %s WHERE date = %s  AND employee_id = %s", (to_logout, system_date, employee_id))
     mydb.commit()
 
 
@@ -102,11 +110,10 @@ def calculate_hours():
 
 
 def worktime_gui():
-
     # Define the path to the images
     login_image = 'in.png'
     logout_image = 'out.png'
-    download_image =  'download.png'
+    download_image = 'download.png'
     # Define the corporate theme for the window
     sg.theme('Green')
 
@@ -118,7 +125,8 @@ def worktime_gui():
             sg.Button('', button_color=color, image_filename=logout_image, border_width=0, pad=(30, 20), key='logout')
         ],
         [
-            sg.Button('', button_color=color, image_filename=download_image, border_width=0, pad=(30, 20), key='download')
+            sg.Button('', button_color=color, image_filename=download_image, border_width=0, pad=(30, 20),
+                      key='download')
         ]
     ]
 
@@ -129,6 +137,7 @@ def worktime_gui():
         event, values = window.read()
         # check if table exists in database
         database_table_check()
+        employee_id = get_employee_id(username)
         # See if user wants to quit or window was closed
         if event == sg.WINDOW_CLOSED:
             break
@@ -136,13 +145,13 @@ def worktime_gui():
         else:
             if event == 'login':
                 login_time = now.strftime("%H:%M:%S")
-                save_login_data(login_time)
+                save_login_data(login_time, employee_id)
                 if sg.popup_auto_close("LogIN Time {} !!!".format(login_time), button_type=5, auto_close=True,
                                        auto_close_duration=2):
                     break
             elif event == 'logout':
                 logout_time = now.strftime("%H:%M:%S")
-                save_logout_data(logout_time)
+                save_logout_data(logout_time, employee_id)
                 stunden_pro_tag = calculate_hours()
                 if sg.popup_auto_close("LogOUT Time {} !!!.\n".format(logout_time) + "Working hours {}.\n".format(
                         stunden_pro_tag) + "INFO : Default break of 45 mins is deducted !!", button_type=5,
@@ -150,7 +159,7 @@ def worktime_gui():
                                        auto_close_duration=2):
                     break
             elif event == 'download':
-                dt.download_table_to_pdf("work_hours", get_pdf_name(), username, mydb)
+                dt.download_table_to_pdf("work_hours", get_pdf_name(), username, employee_id, mydb)
                 if sg.popup_auto_close("Document Downloaded!!!", button_type=5, auto_close=True, auto_close_duration=2):
                     break
 
@@ -167,14 +176,13 @@ logo = sg.Image(logo_path)
 # Define the corporate theme for the window
 sg.theme('Green')
 
-
 layout = [
     [
         sg.Column(
             [
                 [logo],
                 [sg.Text('You can only manage time if you track it right. - Spica’s team', justification='center',
-                       pad=(1, 50))],
+                         pad=(1, 50))],
                 [sg.Text('Company Name', font=('Arial', 14, 'bold'))],
                 [sg.Input(key='-COMPANYNAME-', size=(20, 1))],
                 [sg.Text('Username', font=('Arial', 14, 'bold'))],
@@ -199,7 +207,7 @@ while True:
         companyname = values['-COMPANYNAME-']
         username = values['-USERNAME-']
         password = values['-PASSWORD-']
-        if validate_user_login(companyname, username, password):
+        if validate_user_login(username, password):
             window.close()
             worktime_gui()
         else:

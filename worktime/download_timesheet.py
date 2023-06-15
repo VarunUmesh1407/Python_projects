@@ -14,10 +14,11 @@ month = "WorkTime of" + " " + calendar.month_name[now.month]
 system_date = date.today().strftime('%Y/%m/%d')
 
 
-def download_table_to_pdf(table_name, pdf_file, username, mydb):
+def download_table_to_pdf(table_name, pdf_file, username, employee_id, mydb):
     # Read the table into a DataFrame (assuming you have a valid connection named 'mydb')
-    df = pd.read_sql_query("SELECT * FROM " + table_name, mydb)
-    df_user = pd.read_sql_query("SELECT * FROM user_database", mydb)
+    query = "SELECT * FROM " + table_name + " WHERE employee_id = %s"
+    df = pd.read_sql_query(query, mydb, params=[employee_id])
+    # df_user = pd.read_sql_query("SELECT * FROM user_database", mydb)
 
     # Convert DataFrame to table data
     data = [df.columns.tolist()] + df.values.tolist()
@@ -42,13 +43,13 @@ def download_table_to_pdf(table_name, pdf_file, username, mydb):
         spaceAfter=0.2 * inch,
     )
 
-    user_style = ParagraphStyle(
-        name='UserStyle',
-        parent=styles['Normal'],
-        fontSize=12,
-        textColor=colors.black,
-        spaceAfter=0.5 * inch,
-    )
+    # #user_style = ParagraphStyle(
+    #     name='UserStyle',
+    #     parent=styles['Normal'],
+    #     fontSize=12,
+    #     textColor=colors.black,
+    #     spaceAfter=0.5 * inch,
+    # )
 
     table_content_style = ParagraphStyle(
         name='TableContentStyle',
