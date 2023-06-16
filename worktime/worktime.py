@@ -83,9 +83,9 @@ def get_pdf_name():
     return month + "_" + "timesheet.pdf"
 
 
-def save_login_data(to_login, employee_id):
-    my_cursor.execute("INSERT INTO work_hours (employee_id, date, login) VALUES (%s,%s, %s) ",
-                      (employee_id, system_date, to_login))
+def save_login_data(to_login, employee_id, companyname):
+    my_cursor.execute("INSERT INTO work_hours (employee_id, company_name, date, login) VALUES (%s, %s,%s, %s) ",
+                      (employee_id, companyname, system_date, to_login))
     mydb.commit()
 
 
@@ -94,8 +94,9 @@ def save_logout_data(to_logout, employee_id):
     mydb.commit()
 
 
-def calculate_hours():
-    my_cursor.execute("SELECT login, logout FROM work_hours WHERE date = CURRENT_DATE LIMIT 0, 1")
+def calculate_hours(employee_id):
+    # todo check if nested db affects the calculation
+    my_cursor.execute("SELECT login, logout FROM work_hours WHERE date = CURRENT_DATE LIMIT 0, 1 AND employee_id = %s", (employee_id))
     result = my_cursor.fetchone()
     to_login = result[0]
     to_logout = result[1]
@@ -145,14 +146,14 @@ def worktime_gui():
         else:
             if event == 'login':
                 login_time = now.strftime("%H:%M:%S")
-                save_login_data(login_time, employee_id)
+                save_login_data(login_time, employee_id, companyname)
                 if sg.popup_auto_close("LogIN Time {} !!!".format(login_time), button_type=5, auto_close=True,
                                        auto_close_duration=2):
                     break
             elif event == 'logout':
                 logout_time = now.strftime("%H:%M:%S")
                 save_logout_data(logout_time, employee_id)
-                stunden_pro_tag = calculate_hours()
+                stunden_pro_tag = calculate_hours(employee_id)
                 if sg.popup_auto_close("LogOUT Time {} !!!.\n".format(logout_time) + "Working hours {}.\n".format(
                         stunden_pro_tag) + "INFO : Default break of 45 mins is deducted !!", button_type=5,
                                        auto_close=True,
