@@ -1,113 +1,17 @@
-import calendar
-from datetime import datetime, date
-from reportlab.lib.pagesizes import letter
-from reportlab.lib import colors
-from reportlab.platypus import SimpleDocTemplate, Table, TableStyle, Image
+from datetime import datetime
 import download_timesheet as dt
 import PySimpleGUI as sg
-import mysql.connector as mysql
-import pandas as pd
+import database_read_write as dbwr
+from database import Worktimedb
+import worktime_helper as wh
+
 
 now = datetime.now()
 font = ('Helvetica', 12, 'bold italic')
 sg.theme('Green')
 sg.set_options(font=font)
 color = (sg.theme_background_color(), sg.theme_background_color())
-system_date = date.today()
-
-mydb = mysql.connect(
-    host="localhost",
-    user="admin",
-    password="root",
-    database="worktime_database",
-    auth_plugin='mysql_native_password'
-)
-
-my_cursor = mydb.cursor()
-
-
-def user_database_table_check():
-    my_cursor.execute("SHOW TABLES LIKE 'user_database'")
-    table_exists = my_cursor.fetchone()
-
-    if not table_exists:
-        my_cursor.execute("""
-            CREATE TABLE user_database(
-                id INT AUTO_INCREMENT PRIMARY KEY,
-                employee_id INTEGER,
-                company_name TEXT,
-                username TEXT,
-                password TEXT
-            )
-        """)
-        mydb.commit()
-
-
-def validate_user_login(username, password):
-    my_cursor.execute('SELECT * FROM user_database WHERE username = %s', (username, ))
-    user = my_cursor.fetchone()
-
-    if user and user[4] == password:
-        return True
-    return False
-
-
-def get_employee_id(username):
-    my_cursor.execute('SELECT * FROM user_database WHERE username = %s', (username, ))
-    user = my_cursor.fetchone()
-
-    return user[1]
-
-
-def database_table_check():
-    my_cursor.execute("SHOW TABLES LIKE 'work_hours'")
-    table_exists = my_cursor.fetchone()
-    # If the table doesn't exist, create it
-    if not table_exists:
-        my_cursor.execute("""
-            CREATE TABLE work_hours (
-                id INT AUTO_INCREMENT PRIMARY KEY,
-                employee_id INTEGER,
-                date DATE,
-                login TIME,
-                logout TIME,
-                hours FLOAT
-            )
-        """)
-        mydb.commit()
-
-
-def get_pdf_name():
-    # finding current month name
-    month = calendar.month_name[now.month]
-    return month + "_" + "timesheet.pdf"
-
-
-def save_login_data(to_login, employee_id, companyname):
-    my_cursor.execute("INSERT INTO work_hours (employee_id, company_name, date, login) VALUES (%s, %s,%s, %s) ",
-                      (employee_id, companyname, system_date, to_login))
-    mydb.commit()
-
-
-def save_logout_data(to_logout, employee_id):
-    my_cursor.execute("UPDATE work_hours SET logout = %s WHERE date = %s  AND employee_id = %s", (to_logout, system_date, employee_id))
-    mydb.commit()
-
-
-def calculate_hours(employee_id):
-    # todo check if nested db affects the calculation
-    my_cursor.execute("SELECT login, logout FROM work_hours WHERE date = CURRENT_DATE LIMIT 0, 1 AND employee_id = %s", (employee_id))
-    result = my_cursor.fetchone()
-    to_login = result[0]
-    to_logout = result[1]
-    # format = '%H:%M'
-    no_hours = to_logout - to_login
-    stunden = "{:.2f}".format(no_hours.total_seconds() / 3600)
-    lunch_break = 0.75
-    stunden_with_break = float(stunden) - lunch_break
-    my_cursor.execute("UPDATE work_hours SET hours = %s WHERE date = %s", (stunden_with_break, system_date))
-    mydb.commit()
-    return stunden
+wt = Worktimedb()
 
 
 def worktime_gui():
@@ -137,8 +41,8 @@ def worktime_gui():
     while True:
         event, values = window.read()
         # check if table exists in database
-        database_table_check()
-        employee_id = get_employee_id(username)
+        dbwr.database_table_check()
+        employee_id = dbwr.get_employee_id(username)
         # See if user wants to quit or window was closed
         if event == sg.WINDOW_CLOSED:
             break
@@ -146,21 +50,21 @@ def worktime_gui():
         else:
             if event == 'login':
                 login_time = now.strftime("%H:%M:%S")
-                save_login_data(login_time, employee_id, companyname)
+                dbwr.save_login_data(login_time, employee_id, companyname)
                 if sg.popup_auto_close("LogIN Time {} !!!".format(login_time), button_type=5, auto_close=True,
                                        auto_close_duration=2):
                     break
             elif event == 'logout':
                 logout_time = now.strftime("%H:%M:%S")
-                save_logout_data(logout_time, employee_id)
-                stunden_pro_tag = calculate_hours(employee_id)
+                dbwr.save_logout_data(logout_time, employee_id)
+                stunden_pro_tag = dbwr.calculate_hours(employee_id)
                 if sg.popup_auto_close("LogOUT Time {} !!!.\n".format(logout_time) + "Working hours {}.\n".format(
                         stunden_pro_tag) + "INFO : Default break of 45 mins is deducted !!", button_type=5,
                                        auto_close=True,
                                        auto_close_duration=2):
                     break
             elif event == 'download':
-                dt.download_table_to_pdf("work_hours", get_pdf_name(), username, employee_id, mydb)
+                dt.download_table_to_pdf("work_hours", wh.get_pdf_name(), username, employee_id, wt.connect())
                 if sg.popup_auto_close("Document Downloaded!!!", button_type=5, auto_close=True, auto_close_duration=2):
                     break
 
@@ -201,14 +105,14 @@ window = sg.Window('Login', layout, element_justification='c')
 
 while True:
     event, values = window.read()
-    user_database_table_check()
+    dbwr.user_database_table_check()
     if event == sg.WINDOW_CLOSED:
         break
     if event == 'Login':
         companyname = values['-COMPANYNAME-']
         username = values['-USERNAME-']
         password = values['-PASSWORD-']
-        if validate_user_login(username, password):
+        if dbwr.validate_user_login(username, password):
             window.close()
             worktime_gui()
         else:

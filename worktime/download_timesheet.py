@@ -19,6 +19,7 @@ def download_table_to_pdf(table_name, pdf_file, username, employee_id, mydb):
     query = "SELECT * FROM " + table_name + " WHERE employee_id = %s"
     df = pd.read_sql_query(query, mydb, params=[employee_id])
     # df_user = pd.read_sql_query("SELECT * FROM user_database", mydb)
+    # todo add username , companyname and monthname in a corpoarte way to the report
 
     # Convert DataFrame to table data
     data = [df.columns.tolist()] + df.values.tolist()
