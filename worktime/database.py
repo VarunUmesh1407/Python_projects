@@ -1,5 +1,6 @@
 import mysql.connector
 
+
 class Worktimedb:
     host = "localhost"
     username = "root"
@@ -31,4 +32,3 @@ class Worktimedb:
 
     def commit(self):
         self.connection.commit()
-
