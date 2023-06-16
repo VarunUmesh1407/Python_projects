@@ -34,6 +34,16 @@ def validate_user_login(username, password):
     return False
 
 
+def validate_new_user(username):
+    new_user_query = 'SELECT * FROM user_database WHERE username = %s'
+    parameters = (username,)
+    new_user = wt.execute_query(new_user_query, parameters)
+
+    if new_user and new_user[5] == 0:
+        return True
+    return False
+
+
 def get_employee_id(username):
     user_query = 'SELECT * FROM user_database WHERE username = %s'
     parameters = (username,)
@@ -77,7 +87,7 @@ def save_logout_data(to_logout, employee_id):
 
 def calculate_hours(employee_id):
     get_data_query = "SELECT login, logout FROM work_hours WHERE date = CURRENT_DATE AND employee_id = %s LIMIT 0, 1"
-    parameters_data = (employee_id, )
+    parameters_data = (employee_id,)
     update_hours = "UPDATE work_hours SET hours = %s WHERE date = %s and employee_id = %s"
 
     result = wt.execute_query(get_data_query, parameters_data)

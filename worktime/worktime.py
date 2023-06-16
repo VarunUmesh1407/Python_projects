@@ -72,6 +72,39 @@ def worktime_gui():
     window.close()
 
 
+def change_password_gui():
+    layout = [
+        [
+            sg.Column(
+                [
+                    [sg.Text('Please change the password !!', justification='center',
+                             pad=(1, 50))],
+                    [sg.Text('Current Password', font=('Arial', 14, 'bold'))],
+                    [sg.Input(key='-CURRENTPASSWORD-', size=(20, 1))],
+                    [sg.Text('New Password', font=('Arial', 14, 'bold'))],
+                    [sg.Input(key='-NEWPASSWORD-', size=(20, 1))],
+                    [sg.Text('Repeat New Password', font=('Arial', 14, 'bold'))],
+                    [sg.Input(key='-REPEATPASSWORD-', size=(20, 1), password_char='*')],
+                    [sg.Button('Submit', font=('Arial', 14), size=(10, 1))]
+                ],
+                element_justification='c',
+            )
+        ]
+    ]
+
+    window = sg.Window('Change Password', layout, element_justification='c')
+
+
+    while True:
+        event, values = window.read()
+        if event == sg.WINDOW_CLOSED:
+            break
+        if event == 'Submit':
+            companyname = values['-CURRENTPASSWORD-']
+            username = values['-NEWPASSWORD-']
+            password = values['-REPEATPASSWORD-']
+            # todo write function to update password
+
 # Define the path to the logo image file
 logo_path = 'logo.png'
 
@@ -116,6 +149,10 @@ while True:
             window.close()
             worktime_gui()
         else:
-            sg.popup('Invalid username or password')
+            if dbwr.validate_new_user(username):
+                window.close()
+                change_password_gui()
+            else:
+                sg.popup('Invalid username or password')
 
 window.close()
