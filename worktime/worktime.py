@@ -5,7 +5,6 @@ import database_read_write as dbwr
 from database import Worktimedb
 import worktime_helper as wh
 
-
 now = datetime.now()
 font = ('Helvetica', 12, 'bold italic')
 sg.theme('Green')
@@ -72,38 +71,68 @@ def worktime_gui():
     window.close()
 
 
-def change_password_gui():
+def popup_gui(message):
+    # Create a layout for the pop-up message
     layout = [
-        [
-            sg.Column(
-                [
-                    [sg.Text('Please change the password !!', justification='center',
-                             pad=(1, 50))],
-                    [sg.Text('Current Password', font=('Arial', 14, 'bold'))],
-                    [sg.Input(key='-CURRENTPASSWORD-', size=(20, 1))],
-                    [sg.Text('New Password', font=('Arial', 14, 'bold'))],
-                    [sg.Input(key='-NEWPASSWORD-', size=(20, 1))],
-                    [sg.Text('Repeat New Password', font=('Arial', 14, 'bold'))],
-                    [sg.Input(key='-REPEATPASSWORD-', size=(20, 1), password_char='*')],
-                    [sg.Button('Submit', font=('Arial', 14), size=(10, 1))]
-                ],
-                element_justification='c',
-            )
-        ]
+        [sg.Text(message)],
+        [sg.Button("OK")]
     ]
 
-    window = sg.Window('Change Password', layout, element_justification='c')
+    # Create the pop-up window
+    window = sg.Window("Info", layout)
 
-
+    # Event loop for the pop-up window
     while True:
         event, values = window.read()
-        if event == sg.WINDOW_CLOSED:
+        if event == "OK" or event == sg.WINDOW_CLOSED:
             break
-        if event == 'Submit':
-            companyname = values['-CURRENTPASSWORD-']
-            username = values['-NEWPASSWORD-']
-            password = values['-REPEATPASSWORD-']
-            # todo write function to update password
+
+    # Close the pop-up window
+    window.close()
+
+
+def change_password_gui(username):
+    while True:
+        layout = [
+            [
+                sg.Column(
+                    [
+                        [sg.Text('Please change the password !!', justification='center',
+                                 pad=(1, 50))],
+                        [sg.Text('Current Password', font=('Arial', 14, 'bold'))],
+                        [sg.Input(key='-CURRENTPASSWORD-', size=(20, 1), password_char='*')],
+                        [sg.Text('New Password', font=('Arial', 14, 'bold'))],
+                        [sg.Input(key='-NEWPASSWORD-', size=(20, 1), password_char='*')],
+                        [sg.Text('Repeat New Password', font=('Arial', 14, 'bold'))],
+                        [sg.Input(key='-REPEATPASSWORD-', size=(20, 1), password_char='*')],
+                        [sg.Button('Submit', font=('Arial', 14), size=(10, 1))]
+                    ],
+                    element_justification='c',
+                )
+            ]
+        ]
+
+        window = sg.Window('Change Password', layout, element_justification='c')
+
+        while True:
+            event, values = window.read()
+            if event == sg.WINDOW_CLOSED:
+                break
+            if event == 'Submit':
+                current_password = values['-CURRENTPASSWORD-']
+                new_password = values['-NEWPASSWORD-']
+                repeat_password = values['-REPEATPASSWORD-']
+                # todo write function to check current password
+                if wh.verify_password_match(new_password, repeat_password):
+                    if dbwr.update_new_password(username, new_password):
+                        popup_gui("Password changed successfully !!")
+                        window.close()
+                        return
+                else:
+                    popup_gui("passwords do not match !!")
+                    window.close()
+                    break
+
 
 # Define the path to the logo image file
 logo_path = 'logo.png'
@@ -151,7 +180,8 @@ while True:
         else:
             if dbwr.validate_new_user(username):
                 window.close()
-                change_password_gui()
+                change_password_gui(username)
+                worktime_gui()
             else:
                 sg.popup('Invalid username or password')
 

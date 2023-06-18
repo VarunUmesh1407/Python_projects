@@ -25,7 +25,7 @@ def user_database_table_check():
 
 
 def validate_user_login(username, password):
-    user_query = 'SELECT * FROM user_database WHERE username = %s'
+    user_query = 'SELECT * FROM user_database WHERE username = %s and new_user = 1'
     parameters = (username,)
     user = wt.execute_query(user_query, parameters)
 
@@ -42,6 +42,25 @@ def validate_new_user(username):
     if new_user and new_user[5] == 0:
         return True
     return False
+
+
+def update_new_password(username, new_password):
+    update_password_query = "UPDATE user_database SET password = %s WHERE username = %s"
+    get_new_password_query = "SELECT password FROM user_database WHERE username = %s"
+    update_new_user_query = "UPDATE user_database SET new_user = 1 WHERE username = %s"
+    get_new_user_query =  "SELECT new_user FROM user_database WHERE username = %s"
+    parameters_password = (new_password, username)
+    parameters_user = (username, )
+
+    wt.execute_query(update_password_query, parameters_password)
+    wt.commit()
+    get_password = wt.execute_query(get_new_password_query, parameters_user)
+    if get_password[0] == new_password:
+        wt.execute_query(update_new_user_query, parameters_user)
+        wt.commit()
+        get_new_user = wt.execute_query(get_new_user_query, parameters_user)
+        if get_new_user[0] == 1:
+            return True
 
 
 def get_employee_id(username):
