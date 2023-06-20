@@ -15,3 +15,10 @@ def verify_password_match(new_password, repeat_password):
     if new_password == repeat_password:
         return True
     return False
+
+
+def verify_new_and_current_password(current_password, new_password):
+    # check if current password and new password are same
+    if current_password != new_password:
+        return True
+    return False

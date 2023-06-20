@@ -44,13 +44,23 @@ def validate_new_user(username):
     return False
 
 
+def verify_current_password(username, current_password):
+    get_current_password_query = "SELECT password FROM user_database WHERE username = %s"
+    parameters = (username,)
+    get_current_password = wt.execute_query(get_current_password_query, parameters)
+
+    if get_current_password[0] == current_password:
+        return True
+    return False
+
+
 def update_new_password(username, new_password):
     update_password_query = "UPDATE user_database SET password = %s WHERE username = %s"
     get_new_password_query = "SELECT password FROM user_database WHERE username = %s"
     update_new_user_query = "UPDATE user_database SET new_user = 1 WHERE username = %s"
-    get_new_user_query =  "SELECT new_user FROM user_database WHERE username = %s"
+    get_new_user_query = "SELECT new_user FROM user_database WHERE username = %s"
     parameters_password = (new_password, username)
-    parameters_user = (username, )
+    parameters_user = (username,)
 
     wt.execute_query(update_password_query, parameters_password)
     wt.commit()

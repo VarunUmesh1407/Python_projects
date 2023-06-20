@@ -13,7 +13,7 @@ color = (sg.theme_background_color(), sg.theme_background_color())
 wt = Worktimedb()
 
 
-def worktime_gui():
+def worktime_gui(username, companyname):
     # Define the path to the images
     login_image = 'in.png'
     logout_image = 'out.png'
@@ -117,72 +117,91 @@ def change_password_gui(username):
         while True:
             event, values = window.read()
             if event == sg.WINDOW_CLOSED:
-                break
+                return False
+
             if event == 'Submit':
                 current_password = values['-CURRENTPASSWORD-']
                 new_password = values['-NEWPASSWORD-']
                 repeat_password = values['-REPEATPASSWORD-']
-                # todo write function to check current password
-                if wh.verify_password_match(new_password, repeat_password):
-                    if dbwr.update_new_password(username, new_password):
-                        popup_gui("Password changed successfully !!")
+                if dbwr.verify_current_password(username, current_password):
+                    if wh.verify_new_and_current_password(current_password, new_password):
+                        if wh.verify_password_match(new_password, repeat_password):
+                            if dbwr.update_new_password(username, new_password):
+                                popup_gui("Password changed successfully !!")
+                                window.close()
+                                return True
+                        else:
+                            popup_gui("passwords do not match !!")
+                            window.close()
+                            break
+                    else:
+                        popup_gui("New password cannot be same as the old password !!")
                         window.close()
-                        return
+                        break
                 else:
-                    popup_gui("passwords do not match !!")
+                    popup_gui("Current password does not match !!")
                     window.close()
                     break
 
 
-# Define the path to the logo image file
-logo_path = 'logo.png'
+def main_gui():
+    # Define the path to the logo image file
+    logo_path = 'logo.png'
 
-# Create an sg.Image element for the logo
-logo = sg.Image(logo_path)
+    # Create an sg.Image element for the logo
+    logo = sg.Image(logo_path)
 
-# Define the corporate theme for the window
-sg.theme('Green')
+    # Define the corporate theme for the window
+    sg.theme('Green')
 
-layout = [
-    [
-        sg.Column(
-            [
-                [logo],
-                [sg.Text('You can only manage time if you track it right. - Spica’s team', justification='center',
-                         pad=(1, 50))],
-                [sg.Text('Company Name', font=('Arial', 14, 'bold'))],
-                [sg.Input(key='-COMPANYNAME-', size=(20, 1))],
-                [sg.Text('Username', font=('Arial', 14, 'bold'))],
-                [sg.Input(key='-USERNAME-', size=(20, 1))],
-                [sg.Text('Password', font=('Arial', 14, 'bold'))],
-                [sg.Input(key='-PASSWORD-', size=(20, 1), password_char='*')],
-                [sg.Button('Login', font=('Arial', 14), size=(10, 1))]
-            ],
-            element_justification='c',
-        )
+    layout = [
+        [
+            sg.Column(
+                [
+                    [logo],
+                    [sg.Text('You can only manage time if you track it right. - Spica’s team', justification='center',
+                             pad=(1, 50))],
+                    [sg.Text('Company Name', font=('Arial', 14, 'bold'))],
+                    [sg.Input(key='-COMPANYNAME-', default_text="worktime", size=(20, 1))],
+                    [sg.Text('Username', font=('Arial', 14, 'bold'))],
+                    [sg.Input(key='-USERNAME-', size=(20, 1))],
+                    [sg.Text('Password', font=('Arial', 14, 'bold'))],
+                    [sg.Input(key='-PASSWORD-', size=(20, 1), password_char='*')],
+                    [sg.Button('Login', font=('Arial', 14), size=(10, 1))]
+                ],
+                element_justification='c',
+            )
+        ]
     ]
-]
 
-window = sg.Window('Login', layout, element_justification='c')
+    window = sg.Window('Login', layout, element_justification='c')
 
-while True:
-    event, values = window.read()
-    dbwr.user_database_table_check()
-    if event == sg.WINDOW_CLOSED:
-        break
-    if event == 'Login':
-        companyname = values['-COMPANYNAME-']
-        username = values['-USERNAME-']
-        password = values['-PASSWORD-']
-        if dbwr.validate_user_login(username, password):
-            window.close()
-            worktime_gui()
-        else:
-            if dbwr.validate_new_user(username):
+    while True:
+        event, values = window.read()
+        dbwr.user_database_table_check()
+        if event == sg.WINDOW_CLOSED:
+            break
+        if event == 'Login':
+            companyname = values['-COMPANYNAME-']
+            username = values['-USERNAME-']
+            password = values['-PASSWORD-']
+            if dbwr.validate_user_login(username, password):
                 window.close()
-                change_password_gui(username)
-                worktime_gui()
+                worktime_gui(username, companyname)
             else:
-                sg.popup('Invalid username or password')
+                if dbwr.validate_new_user(username):
+                    window.close()
+                    if change_password_gui(username):
+                        worktime_gui(username, companyname)
+                    else:
+                        popup_gui("Please Change the during first login as advised by admin !!")
+                        window.close()
+                        break
+                else:
+                    sg.popup('Invalid username or password')
 
-window.close()
+    window.close()
+
+
+if __name__ == '__main__':
+    main_gui()
