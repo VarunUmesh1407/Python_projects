@@ -7,7 +7,7 @@ now = datetime.now()
 def get_pdf_name():
     # finding current month name
     month = calendar.month_name[now.month]
-    return month + "_" + "timesheet.pdf"
+    return f"{month}_timesheet.pdf"
 
 
 def verify_password_match(new_password, repeat_password):
