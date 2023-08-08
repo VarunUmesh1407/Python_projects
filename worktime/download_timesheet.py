@@ -18,6 +18,10 @@ def download_table_to_pdf(table_name, pdf_file, username, employee_id, mydb):
     # Read the table into a DataFrame (assuming you have a valid connection named 'mydb')
     query = "SELECT * FROM " + table_name + " WHERE employee_id = %s"
     df = pd.read_sql_query(query, mydb, params=[employee_id])
+    
+    #to remove '0 days' infront of time column
+    df['login'] = df['login'].astype(str).map(lambda x: x[7:])
+    df['logout'] = df['logout'].astype(str).map(lambda x: x[7:])
     # df_user = pd.read_sql_query("SELECT * FROM user_database", mydb)
     # todo add username , companyname and monthname in a corpoarte way to the report
 
@@ -91,7 +95,7 @@ def download_table_to_pdf(table_name, pdf_file, username, employee_id, mydb):
     table.setStyle(tblstyle)
 
     # Add logo
-    logo = "logo.png"  # Path to your logo image file
+    logo = "worktime\logo.png"  # Path to your logo image file
     image = Image(logo, width=100, height=50)
     image.hAlign = 'LEFT'
 
