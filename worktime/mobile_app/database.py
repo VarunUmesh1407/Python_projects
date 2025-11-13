@@ -7,39 +7,39 @@ class Database:
     def __init__(self):
         self.db_path = 'worktime.db'
         self.setup_database()
-    
+   
     def setup_database(self):
         import sqlite3
         conn = sqlite3.connect(self.db_path)
         c = conn.cursor()
-        
-        # Create necessary tables if they don't exist
+      
+         # Create necessary tables if they don't exist
         c.execute('''
-            CREATE TABLE IF NOT EXISTS users (
-                id INTEGER PRIMARY KEY AUTOINCREMENT,
-                username TEXT UNIQUE NOT NULL,
-                password_hash TEXT NOT NULL,
-                company TEXT
-            )
-        ''')
-        
+                CREATE TABLE IF NOT EXISTS "users" ("id"	INTEGER,"employee_id"	
+                    INTEGER,"username"	
+                    TEXT NOT NULL UNIQUE,"password_hash"	
+                    TEXT NOT NULL,"company"	TEXT,
+                    PRIMARY KEY("id" AUTOINCREMENT)
+            )           
+            ''')
+       
         c.execute('''
-            CREATE TABLE IF NOT EXISTS work_hours (
-                id INTEGER PRIMARY KEY AUTOINCREMENT,
-                employee_id INTEGER,
-                login_time TEXT,
-                logout_time TEXT,
-                hours_worked REAL,
-                company TEXT,
-                date TEXT,
-                FOREIGN KEY (employee_id) REFERENCES users (id)
-            )
-        ''')
-        
+                CREATE TABLE IF NOT EXISTS work_hours (
+                    id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    employee_id INTEGER,
+                    login_time TEXT,
+                    logout_time TEXT,
+                    hours_worked REAL,
+                    company TEXT,
+                    date TEXT,
+                    FOREIGN KEY (employee_id) REFERENCES users (id)
+                )
+            ''')
+            
         conn.commit()
         conn.close()
     
-    def validate_login(self, username, password):
+    def validate_user_login(self, username, password):
         conn = sqlite3.connect(self.db_path)
         c = conn.cursor()
         
@@ -52,6 +52,55 @@ class Database:
         conn.close()
         return result is not None
     
+    def validate_new_user(self, username):
+        conn = sqlite3.connect(self.db_path)
+        c = conn.cursor()
+        
+        c.execute('SELECT id FROM users WHERE username=?', (username,))
+        result = c.fetchone()
+        
+        conn.close()
+        return result is None
+    
+    def verify_current_password(self, username, current_password):
+        conn = sqlite3.connect(self.db_path)
+        c = conn.cursor()
+        
+        current_password_hash = sha256(current_password.encode()).hexdigest()
+        
+        c.execute('SELECT password_hash FROM users WHERE username=?', (username,))
+        result = c.fetchone()
+        
+        conn.close()
+        return result is not None and result[0] == current_password_hash
+    
+    def update_new_password(self, username, new_password):
+        conn = sqlite3.connect(self.db_path)
+        c = conn.cursor()
+        
+        new_password_hash = sha256(new_password.encode()).hexdigest()
+        
+        c.execute('UPDATE users SET password_hash=? WHERE username=?',
+                 (new_password_hash, username))
+        conn.commit()
+        
+        c.execute('SELECT password_hash FROM users WHERE username=?', (username,))
+        result = c.fetchone()
+        
+        conn.close()
+        return result is not None and result[0] == new_password_hash
+    
+    def get_employee_id(self, username):
+        conn = sqlite3.connect(self.db_path)
+        c = conn.cursor()
+        
+        c.execute('SELECT id FROM users WHERE username=?', (username,))
+        result = c.fetchone()
+        
+        conn.close()
+        return result[0] if result else None
+    
+
     def save_login(self, username, company, login_time):
         conn = sqlite3.connect(self.db_path)
         c = conn.cursor()
@@ -87,7 +136,7 @@ class Database:
         
         conn.commit()
         conn.close()
-    
+          
     def get_monthly_report(self, username, month=None, year=None):
         conn = sqlite3.connect(self.db_path)
         c = conn.cursor()
