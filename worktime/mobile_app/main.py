@@ -7,6 +7,9 @@ from kivymd.uix.label import MDLabel
 from kivy.core.window import Window
 from kivy.utils import platform
 from kivy.clock import Clock
+from kivy.uix.label import Label
+from kivy.uix.boxlayout import BoxLayout
+from kivy.core.window import Window
 import sqlite3
 from datetime import datetime
 from database import Database
@@ -62,12 +65,21 @@ class LoginScreen(MDScreen):
         app = MDApp.get_running_app()
         # Simulate: dbwr.validate_user_login returns True if user exists and password matches
         # dbwr.validate_new_user returns True if user is new (first login)
+        # Validate credentials first
+        if not db.validate_user_login(username, password):
+            from kivymd.toast import toast
+            toast("Invalid username or password")
+            return
+
+        # If the user is marked as new, force change-password flow
         if db.validate_new_user(username):
-            app.switch_screen('change_password', username, company) 
-        if db.validate_user_login(username, password):
+            app.switch_screen('change_password', username, company)
+            return
+
+        # Normal login: verify current password and go to main screen
+        if db.verify_current_password(username, password):
             app.switch_screen('main', username, company)
         else:
-            # Show error (could use a Snackbar or dialog)
             from kivymd.toast import toast
             toast("Invalid username or password")
 
@@ -185,16 +197,70 @@ class MainScreen(MDScreen):
         self.time_label.text = datetime.now().strftime("%H:%M:%S")
         
     def login(self, instance):
-        # TODO: Implement login functionality
-        pass
+        app = MDApp.get_running_app()
+        username = app.username
+        login_time = datetime.now().strftime("%H:%M:%S")
+        company = app.company
+        if db.save_login(username, company, login_time):
+            app.switch_screen('end', username, company)
+            from kivymd.toast import toast
+            app.custom_toast("Login time was successfully recorded!")   
+        else:
+            app.switch_screen('end', username, company)
+            from kivymd.toast import toast
+            app.custom_toast("Failed to record login time!")
         
     def logout(self, instance):
-        # TODO: Implement logout functionality
-        pass
+        app = MDApp.get_running_app()
+        username = app.username
+        logout_time = datetime.now().strftime("%H:%M:%S")
+        company = app.company
+        if db.save_logout(username, logout_time):
+            app.switch_screen('end', username, company)
+            from kivymd.toast import toast
+            app.custom_toast("Logout time was successfully recorded!")
+            #TODO: Show the summary of the work hours for the day and switch to login screen
+        else:
+            app.switch_screen('end', username, company)
+            from kivymd.toast import toast
+            app.custom_toast("Failed to record logout time!")
         
     def download_report(self, instance):
         # TODO: Implement report download
         pass
+
+class EndScreen(MDScreen):
+    def __init__(self, **kwargs):
+        super().__init__(**kwargs)
+        self.orientation = 'vertical'
+        self.spacing = 20
+        self.padding = 20
+        
+        # Time display
+        self.time_label = MDLabel(
+            text="",
+            halign="center",
+            pos_hint={'center_x': 0.5, 'center_y': 0.8},
+        )
+        self.add_widget(self.time_label)
+        Clock.schedule_interval(self.update_time, 1)
+
+       # OK button
+        self.ok_btn = MDRaisedButton(
+            text="OK",
+            pos_hint={'center_x': 0.5, 'center_y': 0.5},
+            on_release=self.ok
+        )
+        self.add_widget(self.ok_btn) 
+
+
+    def update_time(self, dt):
+        self.time_label.text = datetime.now().strftime("%H:%M:%S")
+
+    def ok(self, instance):
+        #TODO: Switch to login screen and user is logged out
+        app = MDApp.get_running_app()
+        app.logout()
 
 class WorktimeMobileApp(MDApp):
     def __init__(self, **kwargs):
@@ -208,6 +274,7 @@ class WorktimeMobileApp(MDApp):
         self.sm.add_widget(LoginScreen(name='login'))
         self.sm.add_widget(MainScreen(name='main'))
         self.sm.add_widget(ChangePasswordScreen(name='change_password'))
+        self.sm.add_widget(EndScreen(name='end'))
         return self.sm
     def switch_screen(self, screen_name, username="", company=""):
         self.username = username
@@ -215,6 +282,19 @@ class WorktimeMobileApp(MDApp):
         self.sm.current = screen_name
     def on_start(self):
         self.init_database()
+
+    def logout(self):
+        self.username = ""
+        self.company = ""
+        self.sm.current = 'login'
+       
+    def custom_toast(self, display_message, font_name="Roboto", font_size=20):
+        layout = BoxLayout(size_hint=(None, None), size=(300, 50), pos_hint={"center_x": 0.5, "center_y": 0.1})
+        label = Label(text=display_message, font_name=font_name, font_size=font_size, color=(0, 0, 0, 1))
+        layout.add_widget(label)
+        Window.add_widget(layout)
+        Clock.schedule_once(lambda dt: Window.remove_widget(layout), 10)  # Remove after 10 seconds
+
     def init_database(self):
         conn = sqlite3.connect('worktime.db')
         c = conn.cursor()
